@@ -1,6 +1,7 @@
 import logging
-import pickle
 import time
+
+import msgpack
 
 try:
     import redis
@@ -66,13 +67,43 @@ class RedisManager(PubSubManager):  # pragma: no cover
         self.redis = redis.Redis.from_url(self.redis_url)
         self.pubsub = self.redis.pubsub()
 
+    def _make_payload(self, data):
+        return {
+            'nsp': data['namespace'],
+            'type': 2,
+            'data': [
+                data['event'],
+                data['data'],
+            ]
+        }
+
+    def _make_options(self, data):
+        room = data['room']
+        return {
+            'rooms': [room] if room is not None else []
+        }
+
+    def _make_protocol(self, data):
+        protocol = self.channel + '#' + data['namespace'] + '#'
+        if data['room'] is not None:
+            protocol = protocol + data['room'] + '#'
+        return protocol
+
     def _publish(self, data):
         retry = True
         while True:
             try:
                 if not retry:
                     self._redis_connect()
-                return self.redis.publish(self.channel, pickle.dumps(data))
+                msg = [
+                    self.host_id,
+                    self._make_payload(data),
+                    self._make_options(data),
+                ]
+                return self.redis.publish(
+                    self._make_protocol(data),
+                    msgpack.packb(msg)
+                )
             except redis.exceptions.ConnectionError:
                 if retry:
                     logger.error('Cannot publish to redis... retrying')
