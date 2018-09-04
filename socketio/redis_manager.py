@@ -119,7 +119,7 @@ class RedisManager(PubSubManager):  # pragma: no cover
             try:
                 if connect:
                     self._redis_connect()
-                    self.pubsub.subscribe(self.channel)
+                    self.pubsub.psubscribe(self.channel + '*')
                 for message in self.pubsub.listen():
                     yield message
             except redis.exceptions.ConnectionError:
@@ -132,10 +132,10 @@ class RedisManager(PubSubManager):  # pragma: no cover
                     retry_sleep = 60
 
     def _listen(self):
-        channel = self.channel.encode('utf-8')
-        self.pubsub.subscribe(self.channel)
+        wild_card_channel = self.channel + '*'
+        self.pubsub.psubscribe(wild_card_channel)
         for message in self._redis_listen_with_retries():
-            if message['channel'] == channel and \
-                    message['type'] == 'message' and 'data' in message:
+            if wild_card_channel.encode('utf-8')[:-1] in message['channel'] and \
+                    message['type'] == 'pmessage' and 'data' in message:
                 yield message['data']
-        self.pubsub.unsubscribe(self.channel)
+        self.pubsub.punsubscribe(wild_card_channel)
