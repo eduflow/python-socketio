@@ -2,8 +2,9 @@ from functools import partial
 import uuid
 
 import json
-import pickle
 import six
+
+import msgpack
 
 from .base_manager import BaseManager
 
@@ -94,18 +95,15 @@ class PubSubManager(BaseManager):
         # Events with callbacks are very tricky to handle across hosts
         # Here in the receiving end we set up a local callback that preserves
         # the callback host and id from the sender
-        remote_callback = message.get('callback')
-        remote_host_id = message.get('host_id')
-        if remote_callback is not None and len(remote_callback) == 3:
-            callback = partial(self._return_callback, remote_host_id,
-                               *remote_callback)
-        else:
-            callback = None
-        super(PubSubManager, self).emit(message['event'], message['data'],
-                                        namespace=message.get('namespace'),
-                                        room=message.get('room'),
-                                        skip_sid=message.get('skip_sid'),
-                                        callback=callback)
+        payload = message[1]
+        options = message[2]
+        rooms = options.get('rooms', [])
+        super(PubSubManager, self).emit(payload['data'][0],
+                                        payload['data'][1],
+                                        namespace=payload['nsp'],
+                                        room=rooms[0] if len(rooms) > 0 else None,
+                                        skip_sid=None,
+                                        callback=None)
 
     def _handle_callback(self, message):
         if self.host_id == message.get('host_id'):
@@ -137,7 +135,7 @@ class PubSubManager(BaseManager):
             else:
                 if isinstance(message, six.binary_type):  # pragma: no cover
                     try:
-                        data = pickle.loads(message)
+                        data = msgpack.unpackb(message)
                     except:
                         pass
                 if data is None:
@@ -147,7 +145,7 @@ class PubSubManager(BaseManager):
                         pass
             if data and 'method' in data:
                 if data['method'] == 'emit':
-                    self._handle_emit(data)
+                self._handle_emit(data)
                 elif data['method'] == 'callback':
                     self._handle_callback(data)
                 elif data['method'] == 'close_room':
