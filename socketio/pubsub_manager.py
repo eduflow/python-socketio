@@ -142,10 +142,5 @@ class PubSubManager(BaseManager):
                         data = json.loads(message)
                     except:
                         pass
-            if data and 'method' in data:
-                if data['method'] == 'emit':
+            if data:
                 self._handle_emit(data)
-                elif data['method'] == 'callback':
-                    self._handle_callback(data)
-                elif data['method'] == 'close_room':
-                    self._handle_close_room(data)
