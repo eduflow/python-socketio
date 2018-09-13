@@ -29,7 +29,8 @@ setup(
     platforms='any',
     install_requires=[
         'six>=1.9.0',
-        'python-engineio>=2.2.0'
+        'python-engineio>=2.2.0',
+        'msgpack>=0.5.6'
     ],
     tests_require=[
         'mock',
