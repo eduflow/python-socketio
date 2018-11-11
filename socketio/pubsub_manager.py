@@ -134,7 +134,7 @@ class PubSubManager(BaseManager):
             else:
                 if isinstance(message, six.binary_type):  # pragma: no cover
                     try:
-                        data = msgpack.unpackb(message)
+                        data = msgpack.unpackb(message, raw=False)  # raw=False for py3
                     except:
                         pass
                 if data is None:
