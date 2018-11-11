@@ -103,7 +103,7 @@ class RedisManager(PubSubManager):  # pragma: no cover
                 ]
                 return self.redis.publish(
                     self._make_protocol(data),
-                    msgpack.packb(msg)
+                    msgpack.packb(msg, use_bin_type=True)  # use_bin_type=3 for py3
                 )
             except redis.exceptions.ConnectionError:
                 if retry:
